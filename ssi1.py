@@ -7,25 +7,32 @@ import imutils
 import dlib
 import cv2
 #import matplotlib.pyplot as plt
-import pandas
+import pandas as pd
+import sklearn
 import sklearn.linear_model
+import sklearn.metrics
+#import sklearn.multiclass
+#from sklearn.multiclass import OneVsRestClassifier
+import csv
+from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 
 #direc = 'neg-samples'
-
-
-def get_landmarks(direc):
+#class sklearn.multiclass.OneVsRestClassifier(estimator, *, n_jobs=None)
+def get_landmarks(direc, output, name):
 	directory = os.listdir(direc)
-	i = 0
+	z = 0
 	shapes =[]
 	for filename in directory:
-		i += 1
-		if i > 10:
-			break
-        #print(filename)
+		z = z+1
+		#print(z)
+		#if z > 100:
+			#break
+		#print(filename)
         # initialize dlib's face detector (HOG-based) and then create
         # the facial landmark predictor
 		detector = dlib.get_frontal_face_detector()
-		predictor = dlib.shape_predictor() #shape_predictor_68_face_landmarks.dat
+		predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat') #shape_predictor_68_face_landmarks.dat
 
         # load the input image, resize it, and convert it to grayscale
 		image_path = direc + "/" + filename
@@ -43,30 +50,98 @@ def get_landmarks(direc):
         	# array
 			shape = predictor(gray, rect)
 			shape = face_utils.shape_to_np(shape)
+			#print(shape)
         	# convert dlib's rectangle to a OpenCV-style bounding box
         	# [i.e., (x, y, w, h)], then draw the face bounding box
-			#(x, y, w, h) = face_utils.rect_to_bb(rect)
-			# cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+			(x, y, w, h) = face_utils.rect_to_bb(rect)
+			cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
         	# show the face number
-			#cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+			cv2.putText(image, "Face #{}".format(i + 1), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         	# loop over the (x, y)-coordinates for the facial landmarks
         	# and draw them on the image
-			#cv2.imshow("Output", image)
-			#cv2.waitKey(0)
+
 			data = []
 			for (x, y) in shape:
-			# 	cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
+				cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
 				data.append(x)
 				data.append(y)
+			#cv2.imshow("Output", image)
+			#cv2.waitKey(0)
 			# here is where you label/label
 
 			shapes.append(data)
-	df = pandas.DataFrame(shapes)
-	df.to_csv('./output.csv')
+	df = pd.DataFrame(shapes)
+	df['category'] = name
+
+	df.to_csv(output) #'./output.csv'
+	# do i return output or df?
+	return output
 
 
 
-get_landmarks('neg-samples')
+def train_val_test_split(dataset):
+	df = pd.read_csv(dataset)
+	df = df.drop(df.index[0])
+	#randomize
+
+  # Returns a tuple of 3 sub-datasets.
+  # The first 80% train, next 10% val, last 10% test.
+  # do i split it w a csv model, do i use numpy?
+  # what is the argument that i feed in, is it output.csv is it
+	return np.array_split(df, [int(df.shape[0] * 0.8), int(df.shape[0] * 0.9)])
+
+
+def log_regression(neg_train, neg_val, neg_test, wh_train, wh_val, wh_test, yn_train, yn_val, yn_test):
+	#vstack the trains
+	# do i need to randomize?
+	train = np.vstack((neg_train, np.vstack((wh_train, yn_train))))
+	y_train = train[:, -1] #get_dummies
+	train = train[:, :-1]
+	#vstack the vals
+	val = np.vstack((neg_val, np.vstack((wh_val, yn_val))))
+	y_val = val[:, -1]
+	val = val[:, :-1]
+	#vstack the tests
+	test = np.vstack((neg_test, np.vstack((wh_test, yn_test))))
+	y_test = test[:, -1]
+	test = test[:, :-1]
+	print(y_train.shape)
+	print("-----")
+	print(y_train)
+
+
+	#something along these lines
+	model = sklearn.linear_model.LogisticRegression(max_iter = 500, multi_class = 'ovr') #multiclass.OneVsRestClassifer(SVC(kernal = 'linear'))
+	model.fit(train, y_train)
+
+	#LinearSVC(random_state=0)
+
+	yhat_train = model.predict(train)
+	#print(yhat_train)
+	f1_train = sklearn.metrics.f1_score(y_train, yhat_train, average='macro')
+	print("this is the f1 score for train{}".format(f1_train))
+
+	yhat_val = model.predict(val)
+	f1_val = sklearn.metrics.f1_score(y_val, yhat_val, average='macro')
+	print("this is the f1 score for val{}".format(f1_val))
+	# find a better penalty
+	# predict f1_score
+	#use it on test set only once
+
+
+
+neg = get_landmarks('neg-samples', './negoutput.csv', 0)
+wh = get_landmarks('wh-samples', './whoutput.csv', 1)
+yn = get_landmarks('yes_no-samples', './ynoutput.csv', 2)
+neg_train, neg_val, neg_test = train_val_test_split(neg)
+wh_train, wh_val, wh_test = train_val_test_split(wh)
+yn_train, yn_val, yn_test = train_val_test_split(yn)
+log_regression(neg_train, neg_val, neg_test, wh_train, wh_val, wh_test, yn_train, yn_val, yn_test)
+
+#print("this is it {}".format(neg_train[0]))
+
+
+
 
 
     #model = sklearn.linear_model.LogisticRegression(penalty='none')
@@ -78,6 +153,3 @@ get_landmarks('neg-samples')
     #cv2.waitKey(0)
     ##plt.scatter(shape[0], shape[1]) #broke python
     #print("this is the shape {}".format(shape))
-
-    # df = pandas.DataFrame(shape)
-    # df.to_csv('./output.csv')
