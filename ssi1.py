@@ -1,4 +1,6 @@
 #model
+import time
+start_time = time.time()
 import os
 from imutils import face_utils
 import numpy as np
@@ -105,12 +107,7 @@ def log_regression(neg_train, neg_val, neg_test, wh_train, wh_val, wh_test, yn_t
 	test = np.vstack((neg_test, np.vstack((wh_test, yn_test))))
 	y_test = test[:, -1]
 	test = test[:, :-1]
-	print(y_train.shape)
-	print("-----")
-	print(y_train)
 
-
-	#something along these lines
 	model = sklearn.linear_model.LogisticRegression(max_iter = 500, multi_class = 'ovr') #multiclass.OneVsRestClassifer(SVC(kernal = 'linear'))
 	model.fit(train, y_train)
 
@@ -119,14 +116,35 @@ def log_regression(neg_train, neg_val, neg_test, wh_train, wh_val, wh_test, yn_t
 	yhat_train = model.predict(train)
 	#print(yhat_train)
 	f1_train = sklearn.metrics.f1_score(y_train, yhat_train, average='macro')
+	recall_train = sklearn.metrics.recall_score(y_train, yhat_train, average='macro')
+	precision_train = sklearn.metrics.precision_score(y_train, yhat_train, average='macro')
 	print("this is the f1 score for train{}".format(f1_train))
+	print("this is the recall score for train{}".format(recall_train))
+	print("this is the precision score for train{}".format(precision_train))
 
-	yhat_val = model.predict(val)
-	f1_val = sklearn.metrics.f1_score(y_val, yhat_val, average='macro')
-	print("this is the f1 score for val{}".format(f1_val))
+	#yhat_val = model.predict(val)
+	#f1_val = sklearn.metrics.f1_score(y_val, yhat_val, average='macro')
+	yhat_test = model.predict(test)
+	f1_test = sklearn.metrics.f1_score(y_test, yhat_test, average='macro')
+	recall_test = sklearn.metrics.recall_score(y_test, yhat_test, average='macro')
+	precision_test = sklearn.metrics.precision_score(y_test, yhat_test, average='macro')
+	print("this is the f1 score for test{}".format(f1_test))
+	print("this is the recall score for test{}".format(recall_test))
+	print("this is the precision score for test{}".format(precision_test))
+	print(model.coef_)
+	print('this is classes')
+	print(model.classes_)
+	print('this is intercept')
+	print(model.intercept_)
+	print('this is n inter')
+	print(model.n_iter_)
+	print("--- %s seconds ---" % (time.time() - start_time))
+	#print(pandas.train.columns)
+
 	# find a better penalty
 	# predict f1_score
 	#use it on test set only once
+	# penalty none was taking too long
 
 
 
@@ -137,11 +155,16 @@ neg_train, neg_val, neg_test = train_val_test_split(neg)
 wh_train, wh_val, wh_test = train_val_test_split(wh)
 yn_train, yn_val, yn_test = train_val_test_split(yn)
 log_regression(neg_train, neg_val, neg_test, wh_train, wh_val, wh_test, yn_train, yn_val, yn_test)
+print('this is iter 500')
+
+
+
+
 
 #print("this is it {}".format(neg_train[0]))
 
 
-
+# test with changing the size to 224 pixels
 
 
     #model = sklearn.linear_model.LogisticRegression(penalty='none')

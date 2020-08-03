@@ -12,13 +12,13 @@ import cv2
 import pandas
 import sklearn.linear_model
 num_image = 676
-# construct the argument parser and parse the arguments
-# ap = argparse.ArgumentParser()
-# ap.add_argument("-p", "--shape-predictor", required=True,
-# 	help="path to facial landmark predictor")
-# ap.add_argument("-i", "--image images/"+num_image+".jpg", required=True,
-# 	help="path to input image")
-# args = vars(ap.parse_args())
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-p", "--shape-predictor", required=True,
+	help="path to facial landmark predictor")
+ap.add_argument("-i", "--image", required=True,
+	help="path to input image")
+args = vars(ap.parse_args())
 
 
 # initialize dlib's face detector (HOG-based) and then create
@@ -77,7 +77,6 @@ cv2.waitKey(0)
 #print(shape)
 
 
-df = pandas.DataFrame(shape)
-df.to_csv('./output.csv')
+
 #print(rect)
 #print(gray)
